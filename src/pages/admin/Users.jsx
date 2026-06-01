@@ -89,7 +89,7 @@ export default function Users() {
         </button>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+      <div className="px-4 py-6 space-y-4">
         <div className="relative">
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث بالاسم أو الدور..."
@@ -116,7 +116,7 @@ export default function Users() {
               {filtered.map(u => {
                 const role = ROLES[u.role] || { label: u.role, icon: '👤', color: 'bg-slate-100 text-slate-700' }
                 return (
-                  <div key={u.id} className="flex items-center gap-2 px-4 py-4 hover:bg-slate-50 transition-colors flex-nowrap overflow-x-auto">
+                  <div key={u.id} className="flex items-center gap-2 px-4 py-4 hover:bg-slate-50 transition-colors">
                     <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center font-black text-white text-sm shadow">
                       {u.full_name?.charAt(0) || '?'}
                     </div>
