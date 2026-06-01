@@ -24,6 +24,8 @@ const NAV_ITEMS = [
   { id: 'settings',    label: 'الإعدادات',       icon: '⚙️' },
 ]
 
+const SIDEBAR_W = 224
+
 function Sidebar({ active, setActive, profile }) {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -32,7 +34,7 @@ function Sidebar({ active, setActive, profile }) {
   }
 
   return (
-    <div className="fixed right-0 top-0 h-full w-56 bg-slate-900 text-white flex flex-col z-20 shadow-2xl">
+    <div style={{ width: SIDEBAR_W }} className="fixed right-0 top-0 h-full bg-slate-900 text-white flex flex-col z-20 shadow-2xl">
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center font-black text-lg shadow-lg">A</div>
@@ -110,15 +112,8 @@ function AppInner() {
     </div>
   )
 
-  // مدير الفرع
-  if (profile?.role === 'branch_manager') {
-    return <BranchDashboard />
-  }
-
-  // المدقق الداخلي أو الخارجي
-  if (profile?.role === 'internal_auditor' || profile?.role === 'external_auditor') {
-    return <AuditorDashboard />
-  }
+  if (profile?.role === 'branch_manager') return <BranchDashboard />
+  if (profile?.role === 'internal_auditor' || profile?.role === 'external_auditor') return <AuditorDashboard />
 
   const renderPage = () => {
     switch (activePage) {
@@ -137,7 +132,7 @@ function AppInner() {
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50">
       <Sidebar active={activePage} setActive={setActivePage} profile={profile} />
-      <div className="mr-56">
+      <div style={{ marginRight: SIDEBAR_W, width: `calc(100vw - ${SIDEBAR_W}px)`, overflowX: 'hidden' }}>
         {renderPage()}
       </div>
     </div>
