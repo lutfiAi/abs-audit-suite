@@ -10,6 +10,7 @@ import ActionPlans from './pages/admin/ActionPlans'
 import Reports from './pages/admin/Reports'
 import Settings from './pages/admin/Settings'
 import BranchDashboard from './pages/branch/BranchDashboard'
+import AuditorDashboard from './pages/auditor/AuditorDashboard'
 import { supabase } from './lib/supabase'
 
 const NAV_ITEMS = [
@@ -97,14 +98,26 @@ function AppInner() {
       <div className="text-center">
         <div className="text-5xl mb-3">⚠️</div>
         <div className="text-white font-bold mb-2">حساب غير مكتمل</div>
-        <div className="text-slate-400 text-sm">تواصل مع المدير لإعداد حسابك</div>
+        <div className="text-slate-400 text-sm mb-4">تواصل مع المدير لإعداد حسابك</div>
+        <button onClick={async () => {
+          await supabase.auth.signOut()
+          localStorage.clear()
+          location.reload()
+        }} className="bg-red-500 hover:bg-red-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer">
+          🚪 تسجيل الخروج
+        </button>
       </div>
     </div>
   )
 
-  // مدير الفرع — صفحة خاصة
+  // مدير الفرع
   if (profile?.role === 'branch_manager') {
     return <BranchDashboard />
+  }
+
+  // المدقق الداخلي أو الخارجي
+  if (profile?.role === 'internal_auditor' || profile?.role === 'external_auditor') {
+    return <AuditorDashboard />
   }
 
   const renderPage = () => {
