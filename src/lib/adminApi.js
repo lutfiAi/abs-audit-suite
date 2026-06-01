@@ -1,0 +1,67 @@
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseAdmin = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_KEY
+)
+
+// إنشاء مستخدم جديد
+export const createUser = async ({ email, password, full_name, role, company_id, branch_id }) => {
+  // 1. إنشاء في Auth
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+  if (authError) return { error: authError }
+
+  const userId = authData.user.id
+
+  // 2. إنشاء Profile
+  const { error: profileError } = await supabaseAdmin
+    .from('user_profiles')
+    .insert({ id: userId, company_id, full_name, role })
+
+  if (profileError) return { error: profileError }
+
+  // 3. ربط بالفرع لو محدد
+  if (branch_id) {
+    await supabaseAdmin
+      .from('auditor_branches')
+      .insert({ auditor_id: userId, branch_id })
+  }
+
+  return { data: authData.user }
+}
+
+// حذف مستخدم نهائياً
+export const deleteUser = async (userId) => {
+  // 1. حذف من Auth
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+  if (error) return { error }
+
+  // 2. حذف Profile (cascade)
+  await supabaseAdmin.from('user_profiles').delete().eq('id', userId)
+
+  return { success: true }
+}
+
+// تحديث بيانات المستخدم
+export const updateUser = async (userId, updates) => {
+  const { full_name, role, branch_id } = updates
+
+  const { error } = await supabaseAdmin
+    .from('user_profiles')
+    .update({ full_name, role })
+    .eq('id', userId)
+
+  if (error) return { error }
+
+  // تحديث الفرع
+  if (branch_id) {
+    await supabaseAdmin.from('auditor_branches').delete().eq('auditor_id', userId)
+    await supabaseAdmin.from('auditor_branches').insert({ auditor_id: userId, branch_id })
+  }
+
+  return { success: true }
+}
