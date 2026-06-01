@@ -9,17 +9,18 @@ import Audits from './pages/admin/Audits'
 import ActionPlans from './pages/admin/ActionPlans'
 import Reports from './pages/admin/Reports'
 import Settings from './pages/admin/Settings'
+import BranchDashboard from './pages/branch/BranchDashboard'
 import { supabase } from './lib/supabase'
 
 const NAV_ITEMS = [
-  { id: 'dashboard',   label: 'الرئيسية',       icon: '📊' },
-  { id: 'users',       label: 'المستخدمون',      icon: '👥' },
-  { id: 'branches',    label: 'الفروع',           icon: '🏪' },
-  { id: 'departments', label: 'الأقسام',          icon: '📋' },
-  { id: 'audits',      label: 'التدقيقات',        icon: '🔍' },
-  { id: 'actions',     label: 'خطط التصحيح',     icon: '⚠️' },
-  { id: 'reports',     label: 'التقارير',         icon: '📈' },
-  { id: 'settings',    label: 'الإعدادات',        icon: '⚙️' },
+  { id: 'dashboard',   label: 'الرئيسية',      icon: '📊' },
+  { id: 'users',       label: 'المستخدمون',     icon: '👥' },
+  { id: 'branches',    label: 'الفروع',          icon: '🏪' },
+  { id: 'departments', label: 'الأقسام',         icon: '📋' },
+  { id: 'audits',      label: 'التدقيقات',       icon: '🔍' },
+  { id: 'actions',     label: 'خطط التصحيح',    icon: '⚠️' },
+  { id: 'reports',     label: 'التقارير',        icon: '📈' },
+  { id: 'settings',    label: 'الإعدادات',       icon: '⚙️' },
 ]
 
 function Sidebar({ active, setActive, profile }) {
@@ -101,6 +102,11 @@ function AppInner() {
     </div>
   )
 
+  // مدير الفرع — صفحة خاصة
+  if (profile?.role === 'branch_manager') {
+    return <BranchDashboard />
+  }
+
   const renderPage = () => {
     switch (activePage) {
       case 'dashboard':   return <Dashboard />
@@ -111,15 +117,7 @@ function AppInner() {
       case 'actions':     return <ActionPlans />
       case 'reports':     return <Reports />
       case 'settings':    return <Settings />
-      default: return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="text-5xl mb-3">🚧</div>
-            <div className="text-xl font-black text-slate-700">قيد التطوير</div>
-            <div className="text-slate-400 text-sm mt-1">هذه الصفحة ستكون جاهزة قريباً</div>
-          </div>
-        </div>
-      )
+      default:            return <Dashboard />
     }
   }
 
