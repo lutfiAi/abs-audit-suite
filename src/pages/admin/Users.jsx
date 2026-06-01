@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
-import { createUser, deleteUser, updateUser } from '../../lib/adminApi'
 import { useAuth } from '../../context/AuthContext'
 
 const ROLES = {
@@ -31,12 +30,8 @@ export default function Users() {
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
-  const [showEdit, setShowEdit] = useState(false)
-  const [showDelete, setShowDelete] = useState(false)
-  const [selectedUser, setSelectedUser] = useState(null)
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'branch_manager', branch_id: '' })
-  const [editForm, setEditForm] = useState({ full_name: '', role: '', branch_id: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -44,7 +39,7 @@ export default function Users() {
     const cid = profile?.company_id
     if (!cid) return
     const [u, b] = await Promise.all([
-      supabase.from('user_profiles').select('*').eq('company_id', cid).order('created_at', { ascending: false }),
+      supabase.from('user_profiles').select('*, companies(name)').eq('company_id', cid).order('created_at', { ascending: false }),
       supabase.from('branches').select('id, name').eq('company_id', cid).eq('is_active', true),
     ])
     setUsers(u.data || [])
@@ -55,39 +50,21 @@ export default function Users() {
   useEffect(() => { fetchAll() }, [fetchAll])
 
   const handleAdd = async () => {
-    if (!form.email || !form.password || !form.full_name) {
-      setError('يرجى ملء جميع الحقول المطلوبة')
-      return
-    }
+    if (!form.email || !form.password || !form.full_name) { setError('يرجى ملء جميع الحقول المطلوبة'); return }
     setSaving(true); setError('')
-    const { error: err } = await createUser({
-      email: form.email,
-      password: form.password,
-      full_name: form.full_name,
-      role: form.role,
-      company_id: profile?.company_id,
-      branch_id: form.branch_id || null,
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email: form.email, password: form.password })
+    if (authError) { setError(authError.message); setSaving(false); return }
+    const userId = authData?.user?.id
+    if (!userId) { setError('حدث خطأ في إنشاء المستخدم'); setSaving(false); return }
+    const { error: profileError } = await supabase.from('user_profiles').insert({
+      id: userId, company_id: profile?.company_id, full_name: form.full_name, role: form.role,
     })
-    if (err) { setError(err.message); setSaving(false); return }
+    if (profileError) { setError(profileError.message); setSaving(false); return }
+    if ((form.role === 'branch_manager' || form.role === 'internal_auditor') && form.branch_id) {
+      await supabase.from('auditor_branches').insert({ auditor_id: userId, branch_id: form.branch_id })
+    }
     setShowAdd(false)
     setForm({ email: '', password: '', full_name: '', role: 'branch_manager', branch_id: '' })
-    fetchAll()
-    setSaving(false)
-  }
-
-  const handleEdit = async () => {
-    setSaving(true); setError('')
-    const { error: err } = await updateUser(selectedUser.id, editForm)
-    if (err) { setError(err.message); setSaving(false); return }
-    setShowEdit(false)
-    fetchAll()
-    setSaving(false)
-  }
-
-  const handleDelete = async () => {
-    setSaving(true)
-    await deleteUser(selectedUser.id)
-    setShowDelete(false)
     fetchAll()
     setSaving(false)
   }
@@ -97,21 +74,7 @@ export default function Users() {
     fetchAll()
   }
 
-  const openEdit = (user) => {
-    setSelectedUser(user)
-    setEditForm({ full_name: user.full_name, role: user.role, branch_id: '' })
-    setShowEdit(true)
-    setError('')
-  }
-
-  const openDelete = (user) => {
-    setSelectedUser(user)
-    setShowDelete(true)
-  }
-
-  const filtered = users.filter(u =>
-    u.full_name?.includes(search) || u.role?.includes(search)
-  )
+  const filtered = users.filter(u => u.full_name?.includes(search) || u.role?.includes(search))
 
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50">
@@ -120,15 +83,19 @@ export default function Users() {
           <h1 className="text-xl font-black text-slate-800">👥 إدارة المستخدمين</h1>
           <p className="text-slate-500 text-sm">{users.length} مستخدم في النظام</p>
         </div>
-        <button onClick={() => { setShowAdd(true); setError('') }}
+        <button onClick={() => setShowAdd(true)}
           className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm cursor-pointer transition-all hover:scale-105 shadow-md">
           ➕ إضافة مستخدم
         </button>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+        <div className="relative">
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="ابحث بالاسم أو الدور..."
+            className="w-full bg-white border border-slate-200 rounded-xl pr-10 pl-4 py-3 text-sm focus:outline-none focus:border-amber-400 shadow-sm" />
+        </div>
 
-        {/* STATS */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {Object.entries(ROLES).map(([key, r]) => (
             <div key={key} className="bg-white rounded-xl p-3 text-center border border-slate-100 shadow-sm">
@@ -139,29 +106,17 @@ export default function Users() {
           ))}
         </div>
 
-        {/* SEARCH */}
-        <div className="relative">
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="ابحث بالاسم أو الدور..."
-            className="w-full bg-white border border-slate-200 rounded-xl pr-10 pl-4 py-3 text-sm focus:outline-none focus:border-amber-400 shadow-sm" />
-        </div>
-
-        {/* USERS LIST */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-slate-400">جارٍ التحميل...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center">
-              <div className="text-4xl mb-2">👥</div>
-              <div className="text-slate-400 text-sm">لا يوجد مستخدمون</div>
-            </div>
+            <div className="p-8 text-center"><div className="text-4xl mb-2">👥</div><div className="text-slate-400 text-sm">لا يوجد مستخدمون</div></div>
           ) : (
             <div className="divide-y divide-slate-50">
               {filtered.map(u => {
                 const role = ROLES[u.role] || { label: u.role, icon: '👤', color: 'bg-slate-100 text-slate-700' }
                 return (
-                  <div key={u.id} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors">
+                  <div key={u.id} className="flex items-center gap-2 px-4 py-4 hover:bg-slate-50 transition-colors flex-nowrap overflow-x-auto">
                     <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center font-black text-white text-sm shadow">
                       {u.full_name?.charAt(0) || '?'}
                     </div>
@@ -170,21 +125,11 @@ export default function Users() {
                       <div className="text-xs text-slate-400 mt-0.5">{new Date(u.created_at).toLocaleDateString('ar-SA')}</div>
                     </div>
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${role.color}`}>{role.icon} {role.label}</span>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openEdit(u)}
-                        className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors">
-                        ✏️
-                      </button>
-                      <button onClick={() => toggleActive(u.id, u.is_active)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer transition-all
-                          ${u.is_active ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700' : 'bg-red-100 text-red-700 hover:bg-emerald-100 hover:text-emerald-700'}`}>
-                        {u.is_active ? '✅' : '❌'}
-                      </button>
-                      <button onClick={() => openDelete(u)}
-                        className="w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center cursor-pointer transition-colors">
-                        🗑️
-                      </button>
-                    </div>
+                    <button onClick={() => toggleActive(u.id, u.is_active)}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer transition-all
+                        ${u.is_active ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700' : 'bg-red-100 text-red-700 hover:bg-emerald-100 hover:text-emerald-700'}`}>
+                      {u.is_active ? '✅ نشط' : '❌ معطّل'}
+                    </button>
                   </div>
                 )
               })}
@@ -193,7 +138,6 @@ export default function Users() {
         </div>
       </div>
 
-      {/* ADD MODAL */}
       {showAdd && (
         <Modal title="➕ إضافة مستخدم جديد" onClose={() => { setShowAdd(false); setError('') }}>
           <div className="space-y-3">
@@ -241,69 +185,6 @@ export default function Users() {
               <button onClick={handleAdd} disabled={saving}
                 className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50">
                 {saving ? '...جارٍ الحفظ' : '➕ إضافة'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* EDIT MODAL */}
-      {showEdit && selectedUser && (
-        <Modal title="✏️ تعديل المستخدم" onClose={() => { setShowEdit(false); setError('') }}>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-bold text-slate-600 block mb-1">الاسم الكامل</label>
-              <input value={editForm.full_name} onChange={e => setEditForm(p => ({ ...p, full_name: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400" />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-slate-600 block mb-1">الدور الوظيفي</label>
-              <select value={editForm.role} onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 bg-white">
-                {Object.entries(ROLES).filter(([k]) => k !== 'super_admin').map(([key, r]) => (
-                  <option key={key} value={key}>{r.icon} {r.label}</option>
-                ))}
-              </select>
-            </div>
-            {(editForm.role === 'branch_manager' || editForm.role === 'internal_auditor') && (
-              <div>
-                <label className="text-xs font-bold text-slate-600 block mb-1">الفرع</label>
-                <select value={editForm.branch_id} onChange={e => setEditForm(p => ({ ...p, branch_id: e.target.value }))}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 bg-white">
-                  <option value="">اختر الفرع...</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </div>
-            )}
-            {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-red-600 text-xs">{error}</div>}
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => { setShowEdit(false); setError('') }}
-                className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-50">إلغاء</button>
-              <button onClick={handleEdit} disabled={saving}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50">
-                {saving ? '...جارٍ الحفظ' : '💾 حفظ التعديل'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* DELETE MODAL */}
-      {showDelete && selectedUser && (
-        <Modal title="🗑️ حذف المستخدم" onClose={() => setShowDelete(false)}>
-          <div className="text-center">
-            <div className="text-5xl mb-3">⚠️</div>
-            <p className="text-slate-700 font-bold mb-1">هل تريد حذف هذا المستخدم نهائياً؟</p>
-            <p className="text-slate-500 text-sm mb-5">{selectedUser.full_name}</p>
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-red-600 text-xs mb-4">
-              ⚠️ هذا الإجراء لا يمكن التراجع عنه
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowDelete(false)}
-                className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-50">إلغاء</button>
-              <button onClick={handleDelete} disabled={saving}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50">
-                {saving ? '...جارٍ الحذف' : '🗑️ حذف نهائي'}
               </button>
             </div>
           </div>
