@@ -28,36 +28,36 @@ function Modal({ title, onClose, children }) {
 function UserRow({ u, onEdit, onDelete, onToggle }) {
   const role = ROLES[u.role] || { label: u.role, icon: '👤', color: 'bg-slate-100 text-slate-700' }
   return (
-    <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+    <div className="flex items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+      {/* الأزرار على اليمين أول شي في RTL */}
+      <div className="flex items-center gap-2 shrink-0">
+        <button onClick={() => onEdit(u)}
+          className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors">
+          ✏️
+        </button>
+        <button onClick={() => onToggle(u.id, u.is_active)}
+          className={`text-xs font-bold px-2 py-1.5 rounded-xl cursor-pointer transition-all whitespace-nowrap
+            ${u.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+          {u.is_active ? '✅' : '❌'}
+        </button>
+        <button onClick={() => onDelete(u)}
+          className="w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center cursor-pointer transition-colors">
+          🗑️
+        </button>
+      </div>
+      {/* Role */}
+      <span className={`text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${role.color}`}>
+        {role.icon} {role.label}
+      </span>
+      {/* Name */}
+      <div className="flex-1 min-w-0 text-right">
+        <div className="font-bold text-slate-800 text-sm truncate">{u.full_name}</div>
+        <div className="text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString('ar-SA')}</div>
+      </div>
       {/* Avatar */}
       <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center font-black text-white text-sm shadow shrink-0">
         {u.full_name?.charAt(0) || '?'}
       </div>
-      {/* Name */}
-      <div className="min-w-0">
-        <div className="font-bold text-slate-800 text-sm truncate">{u.full_name}</div>
-        <div className="text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString('ar-SA')}</div>
-      </div>
-      {/* Role */}
-      <span className={`text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${role.color}`}>
-        {role.icon} {role.label}
-      </span>
-      {/* Edit */}
-      <button onClick={() => onEdit(u)}
-        className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors shrink-0">
-        ✏️
-      </button>
-      {/* Toggle */}
-      <button onClick={() => onToggle(u.id, u.is_active)}
-        className={`text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer transition-all whitespace-nowrap shrink-0
-          ${u.is_active ? 'bg-emerald-100 text-emerald-700 hover:bg-red-100 hover:text-red-700' : 'bg-red-100 text-red-700 hover:bg-emerald-100 hover:text-emerald-700'}`}>
-        {u.is_active ? '✅ نشط' : '❌ معطّل'}
-      </button>
-      {/* Delete */}
-      <button onClick={() => onDelete(u)}
-        className="w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center cursor-pointer transition-colors shrink-0">
-        🗑️
-      </button>
     </div>
   )
 }
@@ -163,18 +163,8 @@ export default function Users() {
             className="w-full bg-white border border-slate-200 rounded-xl pr-10 pl-4 py-3 text-sm focus:outline-none focus:border-amber-400 shadow-sm" />
         </div>
 
-        {/* USERS TABLE */}
+        {/* USERS LIST */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          {/* TABLE HEADER */}
-          <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-3 px-5 py-3 bg-slate-50 border-b border-slate-100">
-            <div className="w-10"></div>
-            <div className="text-xs font-bold text-slate-500">الاسم</div>
-            <div className="text-xs font-bold text-slate-500">الدور</div>
-            <div className="text-xs font-bold text-slate-500">تعديل</div>
-            <div className="text-xs font-bold text-slate-500">الحالة</div>
-            <div className="text-xs font-bold text-slate-500">حذف</div>
-          </div>
-
           {loading ? (
             <div className="p-8 text-center text-slate-400">جارٍ التحميل...</div>
           ) : filtered.length === 0 ? (
