@@ -28,8 +28,8 @@ function Modal({ title, onClose, children }) {
 function UserRow({ u, onEdit, onDelete, onToggle }) {
   const role = ROLES[u.role] || { label: u.role, icon: '👤', color: 'bg-slate-100 text-slate-700' }
   return (
-    <div className="flex items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
-      {/* الأزرار على اليمين أول شي في RTL */}
+    <div className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+      {/* الأزرار على اليسار */}
       <div className="flex items-center gap-2 shrink-0">
         <button onClick={() => onEdit(u)}
           className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors">
@@ -45,18 +45,18 @@ function UserRow({ u, onEdit, onDelete, onToggle }) {
           🗑️
         </button>
       </div>
-      {/* Role */}
-      <span className={`text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${role.color}`}>
-        {role.icon} {role.label}
-      </span>
-      {/* Name */}
-      <div className="flex-1 min-w-0 text-right">
-        <div className="font-bold text-slate-800 text-sm truncate">{u.full_name}</div>
-        <div className="text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString('ar-SA')}</div>
-      </div>
-      {/* Avatar */}
-      <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center font-black text-white text-sm shadow shrink-0">
-        {u.full_name?.charAt(0) || '?'}
+      {/* المعلومات على اليمين */}
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <div className="font-bold text-slate-800 text-sm">{u.full_name}</div>
+          <div className="text-xs text-slate-400">{new Date(u.created_at).toLocaleDateString('ar-SA')}</div>
+        </div>
+        <span className={`text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${role.color}`}>
+          {role.icon} {role.label}
+        </span>
+        <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center font-black text-white text-sm shadow shrink-0">
+          {u.full_name?.charAt(0) || '?'}
+        </div>
       </div>
     </div>
   )
@@ -129,8 +129,6 @@ export default function Users() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50">
-
-      {/* HEADER */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-black text-slate-800">👥 إدارة المستخدمين</h1>
@@ -143,8 +141,6 @@ export default function Users() {
       </div>
 
       <div className="p-4 space-y-4">
-
-        {/* STATS */}
         <div className="grid grid-cols-5 gap-2">
           {Object.entries(ROLES).map(([key, r]) => (
             <div key={key} className="bg-white rounded-xl p-3 text-center border border-slate-100 shadow-sm">
@@ -155,7 +151,6 @@ export default function Users() {
           ))}
         </div>
 
-        {/* SEARCH */}
         <div className="relative">
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
           <input value={search} onChange={e => setSearch(e.target.value)}
@@ -163,7 +158,6 @@ export default function Users() {
             className="w-full bg-white border border-slate-200 rounded-xl pr-10 pl-4 py-3 text-sm focus:outline-none focus:border-amber-400 shadow-sm" />
         </div>
 
-        {/* USERS LIST */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-slate-400">جارٍ التحميل...</div>
@@ -183,27 +177,23 @@ export default function Users() {
         </div>
       </div>
 
-      {/* ADD MODAL */}
       {showAdd && (
         <Modal title="➕ إضافة مستخدم جديد" onClose={() => { setShowAdd(false); setError('') }}>
           <div className="space-y-3">
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">الاسم الكامل *</label>
               <input value={form.full_name} onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400"
-                placeholder="مثال: أحمد محمد" />
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400" placeholder="مثال: أحمد محمد" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">البريد الإلكتروني *</label>
               <input type="email" dir="ltr" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400"
-                placeholder="email@company.com" />
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400" placeholder="email@company.com" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">كلمة المرور *</label>
               <input type="password" dir="ltr" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400"
-                placeholder="••••••••" />
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400" placeholder="••••••••" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">الدور الوظيفي *</label>
@@ -237,7 +227,6 @@ export default function Users() {
         </Modal>
       )}
 
-      {/* EDIT MODAL */}
       {showEdit && selectedUser && (
         <Modal title="✏️ تعديل المستخدم" onClose={() => { setShowEdit(false); setError('') }}>
           <div className="space-y-3">
@@ -278,7 +267,6 @@ export default function Users() {
         </Modal>
       )}
 
-      {/* DELETE MODAL */}
       {showDelete && selectedUser && (
         <Modal title="🗑️ حذف المستخدم" onClose={() => setShowDelete(false)}>
           <div className="text-center">
