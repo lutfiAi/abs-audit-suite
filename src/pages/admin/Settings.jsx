@@ -1,35 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 
 export default function Settings() {
   const { profile } = useAuth()
-  const [company, setCompany] = useState(null)
   const [form, setForm] = useState({ name: '', name_en: '', sector: '', plan: '' })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' })
+  const [pwForm, setPwForm] = useState({ newPw: '', confirm: '' })
   const [pwError, setPwError] = useState('')
   const [pwSaved, setPwSaved] = useState(false)
 
-  useEffect(() => { fetchCompany() }, [])
+  const fetchCompany = useCallback(async () => {
+    if (!profile?.company_id) return
+    const { data } = await supabase.from('companies').select('*').eq('id', profile.company_id).single()
+    if (data) setForm({ name: data.name, name_en: data.name_en || '', sector: data.sector || '', plan: data.plan || '' })
+  }, [profile?.company_id])
 
-  const fetchCompany = async () => {
-    const { data } = await supabase.from('companies')
-      .select('*').eq('id', profile?.company_id).single()
-    if (data) {
-      setCompany(data)
-      setForm({ name: data.name, name_en: data.name_en || '', sector: data.sector || '', plan: data.plan || '' })
-    }
-  }
+  useEffect(() => { fetchCompany() }, [fetchCompany])
 
   const saveCompany = async () => {
     setSaving(true)
-    await supabase.from('companies').update({
-      name: form.name,
-      name_en: form.name_en,
-      sector: form.sector,
-    }).eq('id', profile?.company_id)
+    await supabase.from('companies').update({ name: form.name, name_en: form.name_en, sector: form.sector }).eq('id', profile?.company_id)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
     setSaving(false)
@@ -41,7 +33,7 @@ export default function Settings() {
     if (pwForm.newPw.length < 6) { setPwError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return }
     const { error } = await supabase.auth.updateUser({ password: pwForm.newPw })
     if (error) { setPwError(error.message); return }
-    setPwForm({ current: '', newPw: '', confirm: '' })
+    setPwForm({ newPw: '', confirm: '' })
     setPwSaved(true)
     setTimeout(() => setPwSaved(false), 3000)
   }
@@ -60,8 +52,6 @@ export default function Settings() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-
-        {/* COMPANY INFO */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-50 flex items-center gap-2">
             <span className="text-xl">🏢</span>
@@ -103,13 +93,12 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* PROFILE INFO */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-50 flex items-center gap-2">
             <span className="text-xl">👤</span>
             <h2 className="font-black text-slate-800">معلومات الحساب</h2>
           </div>
-          <div className="p-5 space-y-3">
+          <div className="p-5">
             <div className="flex items-center gap-4 bg-slate-50 rounded-xl p-4">
               <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center font-black text-2xl text-white shadow-lg">
                 {profile?.full_name?.charAt(0)}
@@ -124,7 +113,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* CHANGE PASSWORD */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-50 flex items-center gap-2">
             <span className="text-xl">🔐</span>
@@ -133,15 +121,13 @@ export default function Settings() {
           <div className="p-5 space-y-3">
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">كلمة المرور الجديدة</label>
-              <input type="password" dir="ltr" value={pwForm.newPw}
-                onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
+              <input type="password" dir="ltr" value={pwForm.newPw} onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
                 className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400"
                 placeholder="••••••••" />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">تأكيد كلمة المرور</label>
-              <input type="password" dir="ltr" value={pwForm.confirm}
-                onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
+              <input type="password" dir="ltr" value={pwForm.confirm} onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
                 className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400"
                 placeholder="••••••••" />
             </div>
@@ -154,7 +140,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* VERSION */}
         <div className="text-center text-slate-400 text-xs py-2">
           ABS Audit Suite v1.0 — جميع الحقوق محفوظة © 2025
         </div>

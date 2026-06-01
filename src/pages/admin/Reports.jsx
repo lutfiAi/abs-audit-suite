@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 
@@ -20,28 +20,23 @@ export default function Reports() {
   const { profile } = useAuth()
   const [audits, setAudits] = useState([])
   const [branches, setBranches] = useState([])
-  const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedBranch, setSelectedBranch] = useState('all')
   const [selectedType, setSelectedType] = useState('all')
 
-  useEffect(() => { fetchAll() }, [])
-
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     const cid = profile?.company_id
-    const [au, br, dp] = await Promise.all([
-      supabase.from('audits')
-        .select('*, branches(name), user_profiles(full_name)')
-        .eq('company_id', cid)
-        .order('created_at', { ascending: false }),
+    if (!cid) return
+    const [au, br] = await Promise.all([
+      supabase.from('audits').select('*, branches(name), user_profiles(full_name)').eq('company_id', cid).order('created_at', { ascending: false }),
       supabase.from('branches').select('id,name').eq('company_id', cid).eq('is_active', true),
-      supabase.from('departments').select('*').eq('company_id', cid).eq('is_active', true),
     ])
     setAudits(au.data || [])
     setBranches(br.data || [])
-    setDepartments(dp.data || [])
     setLoading(false)
-  }
+  }, [profile?.company_id])
+
+  useEffect(() => { fetchAll() }, [fetchAll])
 
   const filtered = audits.filter(a => {
     if (selectedBranch !== 'all' && a.branch_id !== selectedBranch) return false
@@ -62,15 +57,13 @@ export default function Reports() {
   }).sort((a, b) => b.avg - a.avg)
 
   const TYPES = {
-    self_assessment: { label: 'تقييم ذاتي', icon: '📝' },
-    internal_audit: { label: 'تدقيق داخلي', icon: '🔍' },
-    external_audit: { label: 'تدقيق خارجي', icon: '🏛️' },
+    self_assessment: { label: 'تقييم ذاتي',   icon: '📝' },
+    internal_audit:  { label: 'تدقيق داخلي',  icon: '🔍' },
+    external_audit:  { label: 'تدقيق خارجي',  icon: '🏛️' },
   }
 
   const pctColor = (p) => p >= 85 ? '#10b981' : p >= 60 ? '#f59e0b' : '#ef4444'
   const pctLabel = (p) => p >= 85 ? 'ممتاز' : p >= 70 ? 'جيد جداً' : p >= 60 ? 'جيد' : p >= 40 ? 'مقبول' : 'ضعيف'
-
-  const handlePrint = () => window.print()
 
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50">
@@ -79,15 +72,13 @@ export default function Reports() {
           <h1 className="text-xl font-black text-slate-800">📈 التقارير والإحصائيات</h1>
           <p className="text-slate-500 text-sm">{filtered.length} تدقيق</p>
         </div>
-        <button onClick={handlePrint}
+        <button onClick={() => window.print()}
           className="bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm cursor-pointer transition-all hover:scale-105 shadow-md">
           🖨️ طباعة التقرير
         </button>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-
-        {/* FILTERS */}
         <div className="flex flex-wrap gap-3">
           <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)}
             className="border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-amber-400 bg-white shadow-sm">
@@ -101,16 +92,13 @@ export default function Reports() {
           </select>
         </div>
 
-        {/* OVERALL SCORE */}
         <div className="bg-gradient-to-l from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-xl">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <div className="text-slate-400 text-sm mb-1">متوسط التقييم الكلي</div>
               <div className="text-5xl font-black" style={{ color: pctColor(avgScore) }}>{avgScore}%</div>
               <div className="text-lg font-bold mt-1" style={{ color: pctColor(avgScore) }}>{pctLabel(avgScore)}</div>
-              <div className="text-slate-400 text-sm mt-2">
-                بناءً على {filtered.length} تدقيق
-              </div>
+              <div className="text-slate-400 text-sm mt-2">بناءً على {filtered.length} تدقيق</div>
             </div>
             <div className="relative">
               <Ring pct={avgScore} size={120} stroke={12} />
@@ -122,7 +110,6 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* BRANCH RANKINGS */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-50">
             <h2 className="font-black text-slate-800">🏆 ترتيب الفروع</h2>
@@ -162,7 +149,6 @@ export default function Reports() {
           )}
         </div>
 
-        {/* AUDITS TABLE */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-50">
             <h2 className="font-black text-slate-800">📋 سجل التدقيقات</h2>
@@ -176,17 +162,8 @@ export default function Reports() {
               {filtered.map(audit => {
                 const type = TYPES[audit.audit_type]
                 const pct = audit.percentage || 0
-                const statusColor = {
-                  in_progress: 'bg-amber-100 text-amber-700',
-                  completed: 'bg-emerald-100 text-emerald-700',
-                  approved: 'bg-blue-100 text-blue-700',
-                }[audit.status]
-                const statusLabel = {
-                  in_progress: 'جارٍ',
-                  completed: 'مكتمل',
-                  approved: 'معتمد',
-                }[audit.status]
-
+                const statusColor = { in_progress: 'bg-amber-100 text-amber-700', completed: 'bg-emerald-100 text-emerald-700', approved: 'bg-blue-100 text-blue-700' }[audit.status]
+                const statusLabel = { in_progress: 'جارٍ', completed: 'مكتمل', approved: 'معتمد' }[audit.status]
                 return (
                   <div key={audit.id} className="flex items-center gap-4 px-5 py-3 hover:bg-slate-50 transition-colors">
                     <span className="text-xl">{type?.icon}</span>
