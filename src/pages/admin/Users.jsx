@@ -92,25 +92,31 @@ export default function Users() {
     if (err) { setError(err.message); setSaving(false); return }
     setShowAdd(false)
     setForm({ email: '', password: '', full_name: '', role: 'branch_manager', branch_id: '' })
-    fetchAll(); setSaving(false)
+    await fetchAll()
+    setSaving(false)
   }
 
   const handleEdit = async () => {
     setSaving(true); setError('')
     const result = await updateUser(selectedUser.id, editForm)
     if (result?.error) { setError(result.error.message); setSaving(false); return }
-    setShowEdit(false); fetchAll(); setSaving(false)
+    setShowEdit(false)
+    await fetchAll()
+    setSaving(false)
   }
 
   const handleDelete = async () => {
     setSaving(true)
     await deleteUser(selectedUser.id)
-    setShowDelete(false); fetchAll(); setSaving(false)
+    setShowDelete(false)
+    setSelectedUser(null)
+    await fetchAll()
+    setSaving(false)
   }
 
   const toggleActive = async (userId, current) => {
     await supabase.from('user_profiles').update({ is_active: !current }).eq('id', userId)
-    fetchAll()
+    await fetchAll()
   }
 
   const openEdit = (user) => {
