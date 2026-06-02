@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  import.meta.env.VITE_SUPABASE_SERVICE_KEY,
+  {
     auth: {
       storageKey: 'admin-auth',
       autoRefreshToken: false,
