@@ -28,7 +28,7 @@ function Modal({ title, onClose, children }) {
 function UserRow({ u, onEdit, onDelete, onToggle }) {
   const role = ROLES[u.role] || { label: u.role, icon: '👤', color: 'bg-slate-100 text-slate-700' }
   return (
-    <div className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+    <div dir="ltr" className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
       {/* الأزرار على اليسار */}
       <div className="flex items-center gap-2 shrink-0">
         <button onClick={() => onEdit(u)}
