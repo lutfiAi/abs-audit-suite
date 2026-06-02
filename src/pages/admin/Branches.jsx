@@ -103,7 +103,6 @@ export default function Branches() {
       </div>
 
       <div className="p-4 space-y-4">
-        {/* STATS */}
         <div className="grid grid-cols-3 gap-4">
           {[
             { label: 'إجمالي الفروع', value: branches.length, icon: '🏪', color: 'border-sky-500' },
@@ -118,7 +117,6 @@ export default function Branches() {
           ))}
         </div>
 
-        {/* SEARCH */}
         <div className="relative">
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
           <input value={search} onChange={e => setSearch(e.target.value)}
@@ -126,7 +124,6 @@ export default function Branches() {
             className="w-full bg-white border border-slate-200 rounded-xl pr-10 pl-4 py-3 text-sm focus:outline-none focus:border-amber-400 shadow-sm" />
         </div>
 
-        {/* BRANCHES LIST */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           {loading ? (
             <div className="p-8 text-center text-slate-400">جارٍ التحميل...</div>
@@ -138,8 +135,8 @@ export default function Branches() {
           ) : (
             <div className="divide-y divide-slate-50">
               {filtered.map((b, i) => (
-                <div key={b.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors">
-                  {/* الأزرار على اليسار */}
+                <div key={b.id} dir="ltr" className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors">
+                  {/* Buttons on the left */}
                   <div className="flex items-center gap-2 shrink-0">
                     <button onClick={() => openEdit(b)}
                       className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors">
@@ -151,8 +148,12 @@ export default function Branches() {
                     </button>
                   </div>
 
-                  {/* المعلومات على اليمين */}
+                  {/* Info on the right */}
                   <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm shadow shrink-0
+                      ${b.is_active ? 'bg-gradient-to-br from-sky-400 to-sky-600' : 'bg-slate-300'}`}>
+                      {i + 1}
+                    </div>
                     <div className="text-right">
                       <div className="font-bold text-slate-800 text-sm">{b.name}</div>
                       <div className="flex items-center gap-2 mt-0.5 justify-end">
@@ -160,10 +161,6 @@ export default function Branches() {
                         {b.region && <span className="text-xs text-slate-400">📍 {b.region}</span>}
                         {b.user_profiles?.full_name && <span className="text-xs text-slate-400">👤 {b.user_profiles.full_name}</span>}
                       </div>
-                    </div>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm shadow shrink-0
-                      ${b.is_active ? 'bg-gradient-to-br from-sky-400 to-sky-600' : 'bg-slate-300'}`}>
-                      {i + 1}
                     </div>
                   </div>
                 </div>
@@ -173,7 +170,6 @@ export default function Branches() {
         </div>
       </div>
 
-      {/* ADD MODAL */}
       {showAdd && (
         <Modal title="➕ إضافة فرع جديد" onClose={() => { setShowAdd(false); setError('') }}>
           <div className="space-y-3">
@@ -216,7 +212,6 @@ export default function Branches() {
         </Modal>
       )}
 
-      {/* EDIT MODAL */}
       {showEdit && selected && (
         <Modal title="✏️ تعديل الفرع" onClose={() => { setShowEdit(false); setError('') }}>
           <div className="space-y-3">
@@ -256,7 +251,6 @@ export default function Branches() {
         </Modal>
       )}
 
-      {/* DELETE MODAL */}
       {showDelete && selected && (
         <Modal title="🗑️ حذف الفرع" onClose={() => setShowDelete(false)}>
           <div className="text-center">
