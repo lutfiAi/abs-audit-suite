@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 
 const RISK_LABELS = {
-  H: { label: 'عالي', color: 'bg-red-100 text-red-700 border-red-200' },
-  M: { label: 'متوسط', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  L: { label: 'منخفض', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  H: { label: 'عالي',    color: 'bg-red-100 text-red-700 border-red-200' },
+  M: { label: 'متوسط',   color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  L: { label: 'منخفض',   color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
 }
 
-const ICONS = ['📋','🔍','💰','👥','🏪','📊','🔧','🛒','💻','✅','🏭','📣','🎯','🔐','📦']
+const ICONS = ['📋','🔍','💰','👥','🏪','📊','🔧','🛒','💻','✅','🏭','📣','🎯','🔐','📦','✨','🤝','🚗','📱','🏆']
 
 function Modal({ title, onClose, children }) {
   return (
@@ -37,10 +37,7 @@ export default function Departments() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => { fetchDepts() }, [])
-  useEffect(() => { if (activeDept) fetchItems(activeDept.id) }, [activeDept])
-
-  const fetchDepts = async () => {
+  const fetchDepts = useCallback(async () => {
     const { data } = await supabase
       .from('departments')
       .select('*')
@@ -50,9 +47,9 @@ export default function Departments() {
     setDepartments(data || [])
     if (data?.length > 0 && !activeDept) setActiveDept(data[0])
     setLoading(false)
-  }
+  }, [profile?.company_id, activeDept])
 
-  const fetchItems = async (deptId) => {
+  const fetchItems = useCallback(async (deptId) => {
     const { data } = await supabase
       .from('audit_items')
       .select('*')
@@ -60,7 +57,10 @@ export default function Departments() {
       .eq('is_active', true)
       .order('order_num')
     setItems(data || [])
-  }
+  }, [])
+
+  useEffect(() => { fetchDepts() }, [fetchDepts])
+  useEffect(() => { if (activeDept) fetchItems(activeDept.id) }, [activeDept, fetchItems])
 
   const handleAddDept = async () => {
     if (!deptForm.name_ar) { setError('يرجى إدخال اسم القسم'); return }
@@ -102,9 +102,9 @@ export default function Departments() {
   const deleteDept = async (id) => {
     if (!confirm('هل تريد حذف هذا القسم وجميع بنوده؟')) return
     await supabase.from('departments').update({ is_active: false }).eq('id', id)
-    fetchDepts()
     setActiveDept(null)
     setItems([])
+    fetchDepts()
   }
 
   const deleteItem = async (id) => {
@@ -117,21 +117,21 @@ export default function Departments() {
     <div dir="rtl" className="min-h-screen bg-slate-50">
 
       {/* HEADER */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+      <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-black text-slate-800">📋 الأقسام والبنود</h1>
           <p className="text-slate-500 text-sm">{departments.length} قسم — {items.length} بند في القسم الحالي</p>
         </div>
         <button onClick={() => setShowAddDept(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm cursor-pointer transition-all hover:scale-105 shadow-md">
+          className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-2.5 rounded-xl text-sm cursor-pointer transition-all hover:scale-105 shadow-md shrink-0">
           ➕ إضافة قسم
         </button>
       </div>
 
-      <div className="flex h-[calc(100vh-73px)]">
+      <div className="flex" style={{ height: 'calc(100vh - 73px)' }}>
 
         {/* DEPTS SIDEBAR */}
-        <div className="w-64 bg-white border-l border-slate-200 flex flex-col">
+        <div className="w-64 bg-white border-l border-slate-200 flex flex-col shrink-0">
           <div className="p-3 border-b border-slate-100">
             <p className="text-xs font-bold text-slate-400 px-2">الأقسام</p>
           </div>
@@ -144,18 +144,18 @@ export default function Departments() {
                 <div className="text-slate-400 text-xs">لا توجد أقسام</div>
               </div>
             ) : departments.map(d => (
-              <div key={d.id}
+              <div dir="ltr" key={d.id}
                 onClick={() => { setActiveDept(d); fetchItems(d.id) }}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all group
                   ${activeDept?.id === d.id ? 'bg-amber-500 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
-                <span className="text-lg">{d.icon}</span>
-                <span className="flex-1 text-sm font-bold truncate">{d.name_ar}</span>
                 <button
                   onClick={e => { e.stopPropagation(); deleteDept(d.id) }}
-                  className={`opacity-0 group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded-lg transition-all
+                  className={`opacity-0 group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded-lg transition-all shrink-0
                     ${activeDept?.id === d.id ? 'hover:bg-white/20 text-white' : 'hover:bg-red-100 text-red-500'}`}>
                   🗑️
                 </button>
+                <span className="flex-1 text-sm font-bold truncate text-right">{d.name_ar}</span>
+                <span className="text-lg shrink-0">{d.icon}</span>
               </div>
             ))}
           </div>
@@ -173,17 +173,17 @@ export default function Departments() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
+                <button onClick={() => setShowAddItem(true)}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-sm cursor-pointer transition-all hover:scale-105 shadow-sm shrink-0">
+                  ➕ إضافة بند
+                </button>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">{activeDept.icon}</span>
-                  <div>
+                  <div className="text-right">
                     <h2 className="font-black text-slate-800">{activeDept.name_ar}</h2>
                     <p className="text-xs text-slate-400">{items.length} بند</p>
                   </div>
+                  <span className="text-2xl">{activeDept.icon}</span>
                 </div>
-                <button onClick={() => setShowAddItem(true)}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-sm cursor-pointer transition-all hover:scale-105 shadow-sm">
-                  ➕ إضافة بند
-                </button>
               </div>
 
               {items.length === 0 ? (
@@ -200,24 +200,24 @@ export default function Departments() {
                   {items.map((item, i) => {
                     const risk = RISK_LABELS[item.risk_level]
                     return (
-                      <div key={item.id} className={`flex items-start gap-3 px-5 py-4 hover:bg-slate-50 transition-colors ${i > 0 ? 'border-t border-slate-50' : ''}`}>
-                        <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-black text-slate-500 shrink-0 mt-0.5">
-                          {i + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
+                      <div dir="ltr" key={item.id} className={`flex items-start gap-3 px-5 py-4 hover:bg-slate-50 transition-colors ${i > 0 ? 'border-t border-slate-50' : ''}`}>
+                        <button onClick={() => deleteItem(item.id)}
+                          className="text-slate-300 hover:text-red-500 cursor-pointer transition-colors text-lg shrink-0 mt-0.5">
+                          🗑️
+                        </button>
+                        <div className="flex-1 min-w-0 text-right">
                           <p className="text-sm text-slate-700 leading-relaxed">{item.text_ar}</p>
                           {item.text_en && <p className="text-xs text-slate-400 mt-0.5" dir="ltr">{item.text_en}</p>}
-                          <div className="flex items-center gap-2 mt-1.5">
+                          <div className="flex items-center gap-2 mt-1.5 justify-end">
+                            <span className="text-xs text-slate-400">الدرجة: {item.max_score}</span>
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${risk.color}`}>
                               {risk.label} الخطورة
                             </span>
-                            <span className="text-xs text-slate-400">الدرجة: {item.max_score}</span>
                           </div>
                         </div>
-                        <button onClick={() => deleteItem(item.id)}
-                          className="text-slate-300 hover:text-red-500 cursor-pointer transition-colors text-lg shrink-0">
-                          🗑️
-                        </button>
+                        <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-black text-slate-500 shrink-0 mt-0.5">
+                          {i + 1}
+                        </div>
                       </div>
                     )
                   })}
@@ -259,9 +259,7 @@ export default function Departments() {
             {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-red-600 text-xs">{error}</div>}
             <div className="flex gap-2 pt-2">
               <button onClick={() => { setShowAddDept(false); setError('') }}
-                className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-50">
-                إلغاء
-              </button>
+                className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-50">إلغاء</button>
               <button onClick={handleAddDept} disabled={saving}
                 className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50">
                 {saving ? '...جارٍ الحفظ' : '➕ إضافة'}
@@ -313,9 +311,7 @@ export default function Departments() {
             {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-red-600 text-xs">{error}</div>}
             <div className="flex gap-2 pt-2">
               <button onClick={() => { setShowAddItem(false); setError('') }}
-                className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-50">
-                إلغاء
-              </button>
+                className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-50">إلغاء</button>
               <button onClick={handleAddItem} disabled={saving}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50">
                 {saving ? '...جارٍ الحفظ' : '➕ إضافة'}
