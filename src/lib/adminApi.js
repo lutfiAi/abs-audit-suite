@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_SERVICE_KEY,
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
   {
     auth: {
       storageKey: 'admin-auth',
@@ -40,13 +40,25 @@ export const createUser = async ({ email, password, full_name, role, company_id,
 
 // حذف مستخدم نهائياً
 export const deleteUser = async (userId) => {
-  // 1. حذف من auditor_branches أولاً
-  await supabaseAdmin.from('auditor_branches').delete().eq('auditor_id', userId)
+  // 1. إزالة مدير الفرع
+  await supabaseAdmin
+    .from('branches')
+    .update({ manager_id: null })
+    .eq('manager_id', userId)
 
-  // 2. حذف من user_profiles
-  await supabaseAdmin.from('user_profiles').delete().eq('id', userId)
+  // 2. حذف من auditor_branches
+  await supabaseAdmin
+    .from('auditor_branches')
+    .delete()
+    .eq('auditor_id', userId)
 
-  // 3. حذف من Auth
+  // 3. حذف من user_profiles
+  await supabaseAdmin
+    .from('user_profiles')
+    .delete()
+    .eq('id', userId)
+
+  // 4. حذف من Auth
   const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
   if (error) return { error }
 
