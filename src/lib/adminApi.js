@@ -2,12 +2,18 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_SERVICE_KEY
+  import.meta.env.VITE_SUPABASE_SERVICE_KEY,
+  {
+    auth: {
+      storageKey: 'admin-auth',
+      autoRefreshToken: false,
+      persistSession: false,
+    }
+  }
 )
 
 // إنشاء مستخدم جديد
 export const createUser = async ({ email, password, full_name, role, company_id, branch_id }) => {
-  // 1. إنشاء في Auth
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -17,14 +23,12 @@ export const createUser = async ({ email, password, full_name, role, company_id,
 
   const userId = authData.user.id
 
-  // 2. إنشاء Profile
   const { error: profileError } = await supabaseAdmin
     .from('user_profiles')
     .insert({ id: userId, company_id, full_name, role })
 
   if (profileError) return { error: profileError }
 
-  // 3. ربط بالفرع لو محدد
   if (branch_id) {
     await supabaseAdmin
       .from('auditor_branches')
@@ -36,12 +40,15 @@ export const createUser = async ({ email, password, full_name, role, company_id,
 
 // حذف مستخدم نهائياً
 export const deleteUser = async (userId) => {
-  // 1. حذف من Auth
+  // 1. حذف من auditor_branches أولاً
+  await supabaseAdmin.from('auditor_branches').delete().eq('auditor_id', userId)
+
+  // 2. حذف من user_profiles
+  await supabaseAdmin.from('user_profiles').delete().eq('id', userId)
+
+  // 3. حذف من Auth
   const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
   if (error) return { error }
-
-  // 2. حذف Profile (cascade)
-  await supabaseAdmin.from('user_profiles').delete().eq('id', userId)
 
   return { success: true }
 }
@@ -57,7 +64,6 @@ export const updateUser = async (userId, updates) => {
 
   if (error) return { error }
 
-  // تحديث الفرع
   if (branch_id) {
     await supabaseAdmin.from('auditor_branches').delete().eq('auditor_id', userId)
     await supabaseAdmin.from('auditor_branches').insert({ auditor_id: userId, branch_id })

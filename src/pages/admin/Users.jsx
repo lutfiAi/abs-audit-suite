@@ -29,7 +29,6 @@ function UserRow({ u, onEdit, onDelete, onToggle }) {
   const role = ROLES[u.role] || { label: u.role, icon: '👤', color: 'bg-slate-100 text-slate-700' }
   return (
     <div dir="ltr" className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
-      {/* الأزرار على اليسار */}
       <div className="flex items-center gap-2 shrink-0">
         <button onClick={() => onEdit(u)}
           className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors">
@@ -45,7 +44,6 @@ function UserRow({ u, onEdit, onDelete, onToggle }) {
           🗑️
         </button>
       </div>
-      {/* المعلومات على اليمين */}
       <div className="flex items-center gap-3">
         <div className="text-right">
           <div className="font-bold text-slate-800 text-sm">{u.full_name}</div>
@@ -103,8 +101,9 @@ export default function Users() {
 
   const handleEdit = async () => {
     setSaving(true); setError('')
-    const { error: err } = await updateUser(selectedUser.id, editForm)
-    if (err) { setError(err.message); setSaving(false); return }
+    const result = await updateUser(selectedUser.id, editForm)
+    console.log('updateUser result:', result)
+    if (result?.error) { setError(result.error.message); setSaving(false); return }
     setShowEdit(false); fetchAll(); setSaving(false)
   }
 
