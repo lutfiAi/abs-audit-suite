@@ -41,17 +41,20 @@ export default function Departments() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const fetchDepts = useCallback(async () => {
+  const fetchDepts = useCallback(async (cid) => {
+    setLoading(true)
     const { data } = await supabase
       .from('departments')
       .select('*')
-      .eq('company_id', profile?.company_id)
+      .eq('company_id', cid)
       .eq('is_active', true)
       .order('order_num')
     setDepartments(data || [])
-    if (data?.length > 0 && !activeDept) setActiveDept(data[0])
+    if (data?.length > 0) {
+      setActiveDept(prev => prev ?? data[0])
+    }
     setLoading(false)
-  }, [profile?.company_id, activeDept])
+  }, [])
 
   const fetchItems = useCallback(async (deptId) => {
     const { data } = await supabase
@@ -63,8 +66,13 @@ export default function Departments() {
     setItems(data || [])
   }, [])
 
-  useEffect(() => { fetchDepts() }, [fetchDepts])
-  useEffect(() => { if (activeDept) fetchItems(activeDept.id) }, [activeDept, fetchItems])
+  useEffect(() => {
+    if (profile?.company_id) fetchDepts(profile.company_id)
+  }, [profile?.company_id, fetchDepts])
+
+  useEffect(() => {
+    if (activeDept) fetchItems(activeDept.id)
+  }, [activeDept, fetchItems])
 
   const handleAddDept = async () => {
     if (!deptForm.name_ar) { setError('يرجى إدخال اسم القسم'); return }
@@ -79,7 +87,7 @@ export default function Departments() {
     if (err) { setError(err.message); setSaving(false); return }
     setShowAddDept(false)
     setDeptForm({ name_ar: '', name_en: '', icon: '📋' })
-    await fetchDepts()
+    await fetchDepts(profile.company_id)
     setActiveDept(data)
     setSaving(false)
   }
@@ -129,7 +137,7 @@ export default function Departments() {
     setActiveDept(null)
     setItems([])
     setShowDeleteDept(false)
-    await fetchDepts()
+    await fetchDepts(profile.company_id)
     setSaving(false)
   }
 
@@ -140,8 +148,6 @@ export default function Departments() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50">
-
-      {/* HEADER */}
       <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-black text-slate-800">📋 الأقسام والبنود</h1>
@@ -154,8 +160,6 @@ export default function Departments() {
       </div>
 
       <div className="flex" style={{ height: 'calc(100vh - 73px)' }}>
-
-        {/* DEPTS SIDEBAR */}
         <div className="w-64 bg-white border-l border-slate-200 flex flex-col shrink-0">
           <div className="p-3 border-b border-slate-100">
             <p className="text-xs font-bold text-slate-400 px-2">الأقسام</p>
@@ -180,7 +184,6 @@ export default function Departments() {
           </div>
         </div>
 
-        {/* ITEMS AREA */}
         <div className="flex-1 overflow-y-auto p-5">
           {!activeDept ? (
             <div className="flex items-center justify-center h-full">
@@ -222,7 +225,6 @@ export default function Departments() {
                     const risk = RISK_LABELS[item.risk_level]
                     return (
                       <div dir="ltr" key={item.id} className={`flex items-center gap-2 px-4 py-3 hover:bg-slate-50 transition-colors ${i > 0 ? 'border-t border-slate-50' : ''}`}>
-                        {/* أزرار صغيرة دائماً ظاهرة */}
                         <div className="flex gap-1 shrink-0">
                           <button onClick={() => openEditItem(item)}
                             className="w-6 h-6 rounded-md bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors text-xs">
@@ -233,7 +235,6 @@ export default function Departments() {
                             🗑️
                           </button>
                         </div>
-                        {/* المحتوى */}
                         <div className="flex-1 min-w-0 text-right">
                           <p className="text-sm text-slate-700 leading-relaxed">{item.text_ar}</p>
                           <div className="flex items-center gap-2 mt-1 justify-end">
@@ -243,7 +244,6 @@ export default function Departments() {
                             </span>
                           </div>
                         </div>
-                        {/* الرقم */}
                         <div className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center text-xs font-black text-slate-500 shrink-0">
                           {i + 1}
                         </div>
@@ -257,7 +257,6 @@ export default function Departments() {
         </div>
       </div>
 
-      {/* ADD DEPT MODAL */}
       {showAddDept && (
         <Modal title="➕ إضافة قسم جديد" onClose={() => { setShowAddDept(false); setError('') }}>
           <div className="space-y-3">
@@ -298,22 +297,19 @@ export default function Departments() {
         </Modal>
       )}
 
-      {/* ADD ITEM MODAL */}
       {showAddItem && (
         <Modal title="➕ إضافة بند جديد" onClose={() => { setShowAddItem(false); setError('') }}>
           <div className="space-y-3">
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">نص البند بالعربي *</label>
               <textarea value={itemForm.text_ar} onChange={e => setItemForm(p => ({ ...p, text_ar: e.target.value }))}
-                rows={3}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 resize-none"
+                rows={3} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 resize-none"
                 placeholder="اكتب نص البند هنا..." />
             </div>
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">نص البند بالإنجليزي</label>
               <textarea dir="ltr" value={itemForm.text_en} onChange={e => setItemForm(p => ({ ...p, text_en: e.target.value }))}
-                rows={2}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 resize-none"
+                rows={2} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 resize-none"
                 placeholder="Write item text in English..." />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -350,15 +346,13 @@ export default function Departments() {
         </Modal>
       )}
 
-      {/* EDIT ITEM MODAL */}
       {showEditItem && selectedItem && (
         <Modal title="✏️ تعديل البند" onClose={() => { setShowEditItem(false); setError('') }}>
           <div className="space-y-3">
             <div>
               <label className="text-xs font-bold text-slate-600 block mb-1">نص البند *</label>
               <textarea value={editItemForm.text_ar} onChange={e => setEditItemForm(p => ({ ...p, text_ar: e.target.value }))}
-                rows={3}
-                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 resize-none" />
+                rows={3} className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 resize-none" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -394,7 +388,6 @@ export default function Departments() {
         </Modal>
       )}
 
-      {/* DELETE DEPT MODAL */}
       {showDeleteDept && activeDept && (
         <Modal title="🗑️ حذف القسم" onClose={() => setShowDeleteDept(false)}>
           <div className="text-center">

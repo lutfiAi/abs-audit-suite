@@ -31,9 +31,8 @@ export default function Branches() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const fetchAll = useCallback(async () => {
-    const cid = profile?.company_id
-    if (!cid) return
+  const fetchAll = useCallback(async (cid) => {
+    setLoading(true)
     const [br, mg] = await Promise.all([
       supabase.from('branches').select('*, user_profiles(full_name)').eq('company_id', cid).order('created_at', { ascending: false }),
       supabase.from('user_profiles').select('id, full_name').eq('company_id', cid).eq('role', 'branch_manager').eq('is_active', true),
@@ -41,9 +40,11 @@ export default function Branches() {
     setBranches(br.data || [])
     setManagers(mg.data || [])
     setLoading(false)
-  }, [profile?.company_id])
+  }, [])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  useEffect(() => {
+    if (profile?.company_id) fetchAll(profile.company_id)
+  }, [profile?.company_id, fetchAll])
 
   const handleAdd = async () => {
     if (!form.name) { setError('يرجى إدخال اسم الفرع'); return }
@@ -56,7 +57,8 @@ export default function Branches() {
     if (err) { setError(err.message); setSaving(false); return }
     setShowAdd(false)
     setForm({ name: '', code: '', region: '', manager_id: '' })
-    fetchAll(); setSaving(false)
+    fetchAll(profile.company_id)
+    setSaving(false)
   }
 
   const handleEdit = async () => {
@@ -67,13 +69,13 @@ export default function Branches() {
       region: editForm.region, manager_id: editForm.manager_id || null,
     }).eq('id', selected.id)
     if (err) { setError(err.message); setSaving(false); return }
-    setShowEdit(false); fetchAll(); setSaving(false)
+    setShowEdit(false); fetchAll(profile.company_id); setSaving(false)
   }
 
   const handleDelete = async () => {
     setSaving(true)
     await supabase.from('branches').update({ is_active: false }).eq('id', selected.id)
-    setShowDelete(false); fetchAll(); setSaving(false)
+    setShowDelete(false); fetchAll(profile.company_id); setSaving(false)
   }
 
   const openEdit = (b) => {
@@ -136,7 +138,6 @@ export default function Branches() {
             <div className="divide-y divide-slate-50">
               {filtered.map((b, i) => (
                 <div key={b.id} dir="ltr" className="flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors">
-                  {/* Buttons on the left */}
                   <div className="flex items-center gap-2 shrink-0">
                     <button onClick={() => openEdit(b)}
                       className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors">
@@ -147,8 +148,6 @@ export default function Branches() {
                       🗑️
                     </button>
                   </div>
-
-                  {/* Info on the right */}
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm shadow shrink-0
                       ${b.is_active ? 'bg-gradient-to-br from-sky-400 to-sky-600' : 'bg-slate-300'}`}>

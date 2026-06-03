@@ -71,9 +71,8 @@ export default function Users() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const fetchAll = useCallback(async () => {
-    const cid = profile?.company_id
-    if (!cid) return
+  const fetchAll = useCallback(async (cid) => {
+    setLoading(true)
     const [u, b] = await Promise.all([
       supabase.from('user_profiles').select('*').eq('company_id', cid).order('created_at', { ascending: false }),
       supabase.from('branches').select('id, name').eq('company_id', cid).eq('is_active', true),
@@ -81,9 +80,11 @@ export default function Users() {
     setUsers(u.data || [])
     setBranches(b.data || [])
     setLoading(false)
-  }, [profile?.company_id])
+  }, [])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  useEffect(() => {
+    if (profile?.company_id) fetchAll(profile.company_id)
+  }, [profile?.company_id, fetchAll])
 
   const handleAdd = async () => {
     if (!form.email || !form.password || !form.full_name) { setError('يرجى ملء جميع الحقول المطلوبة'); return }
@@ -92,7 +93,7 @@ export default function Users() {
     if (err) { setError(err.message); setSaving(false); return }
     setShowAdd(false)
     setForm({ email: '', password: '', full_name: '', role: 'branch_manager', branch_id: '' })
-    await fetchAll()
+    await fetchAll(profile.company_id)
     setSaving(false)
   }
 
@@ -101,7 +102,7 @@ export default function Users() {
     const result = await updateUser(selectedUser.id, editForm)
     if (result?.error) { setError(result.error.message); setSaving(false); return }
     setShowEdit(false)
-    await fetchAll()
+    await fetchAll(profile.company_id)
     setSaving(false)
   }
 
@@ -110,13 +111,13 @@ export default function Users() {
     await deleteUser(selectedUser.id)
     setShowDelete(false)
     setSelectedUser(null)
-    await fetchAll()
+    await fetchAll(profile.company_id)
     setSaving(false)
   }
 
   const toggleActive = async (userId, current) => {
     await supabase.from('user_profiles').update({ is_active: !current }).eq('id', userId)
-    await fetchAll()
+    await fetchAll(profile.company_id)
   }
 
   const openEdit = (user) => {
