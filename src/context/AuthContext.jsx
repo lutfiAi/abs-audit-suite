@@ -8,26 +8,35 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  const loadProfile = async (userId, retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      const prof = await getUserProfile(userId)
+      if (prof) {
+        setProfile(prof)
+        return
+      }
+      await new Promise(r => setTimeout(r, 1000))
+    }
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null)
-      setLoading(false)
       if (session?.user) {
-        const prof = await getUserProfile(session.user.id)
-        setProfile(prof)
+        await loadProfile(session.user.id)
       }
+      setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setUser(session?.user ?? null)
-        setLoading(false)
         if (session?.user) {
-          const prof = await getUserProfile(session.user.id)
-          setProfile(prof)
+          await loadProfile(session.user.id)
         } else {
           setProfile(null)
         }
+        setLoading(false)
       }
     )
     return () => subscription.unsubscribe()
