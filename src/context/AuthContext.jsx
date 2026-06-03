@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase, getUserProfile } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -7,15 +7,18 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const profileCache = useRef(null)
 
-  const loadProfile = async (userId, retries = 3) => {
-    for (let i = 0; i < retries; i++) {
-      const prof = await getUserProfile(userId)
-      if (prof) {
-        setProfile(prof)
-        return
-      }
-      await new Promise(r => setTimeout(r, 1000))
+  const loadProfile = async (userId) => {
+    // لو البروفايل محفوظ في الكاش استخدمه مباشرة
+    if (profileCache.current?.id === userId) {
+      setProfile(profileCache.current)
+      return
+    }
+    const prof = await getUserProfile(userId)
+    if (prof) {
+      profileCache.current = prof
+      setProfile(prof)
     }
   }
 
@@ -35,6 +38,7 @@ export function AuthProvider({ children }) {
           await loadProfile(session.user.id)
         } else {
           setProfile(null)
+          profileCache.current = null
         }
         setLoading(false)
       }
