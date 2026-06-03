@@ -26,6 +26,17 @@ const NAV_ITEMS = [
 
 const SIDEBAR_W = 224
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="text-center">
+        <div className="text-5xl mb-3 animate-pulse">🏬</div>
+        <div className="text-slate-400 text-sm">جارٍ التحميل...</div>
+      </div>
+    </div>
+  )
+}
+
 function Sidebar({ active, setActive, profile }) {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -84,34 +95,16 @@ function AppInner() {
   const { user, profile, loading } = useAuth()
   const [activePage, setActivePage] = useState('dashboard')
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-5xl mb-3 animate-pulse">🏬</div>
-        <div className="text-slate-400 text-sm">جارٍ التحميل...</div>
-      </div>
-    </div>
-  )
+  // جاري التحميل
+  if (loading) return <LoadingScreen />
 
+  // ما في مستخدم — صفحة تسجيل الدخول
   if (!user) return <Login />
 
-  if (!profile) return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-5xl mb-3">⚠️</div>
-        <div className="text-white font-bold mb-2">حساب غير مكتمل</div>
-        <div className="text-slate-400 text-sm mb-4">تواصل مع المدير لإعداد حسابك</div>
-        <button onClick={async () => {
-          await supabase.auth.signOut()
-          localStorage.clear()
-          location.reload()
-        }} className="bg-red-500 hover:bg-red-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer">
-          🚪 تسجيل الخروج
-        </button>
-      </div>
-    </div>
-  )
+  // البروفايل لم يتحمل بعد — انتظر
+  if (!profile) return <LoadingScreen />
 
+  // توجيه حسب الدور
   if (profile?.role === 'branch_manager') return <BranchDashboard />
   if (profile?.role === 'internal_auditor' || profile?.role === 'external_auditor') return <AuditorDashboard />
 
@@ -131,13 +124,10 @@ function AppInner() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50" style={{ display: 'flex' }}>
-      {/* مساحة الـ Sidebar */}
       <div style={{ width: SIDEBAR_W, flexShrink: 0 }}></div>
-      {/* المحتوى الرئيسي */}
       <div style={{ flex: 1, minWidth: 0 }}>
         {renderPage()}
       </div>
-      {/* الـ Sidebar الثابت */}
       <Sidebar active={activePage} setActive={setActivePage} profile={profile} />
     </div>
   )
