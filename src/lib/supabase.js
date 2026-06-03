@@ -8,6 +8,8 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    storageKey: 'abs-audit-session',
+    storage: window.localStorage,
   }
 })
 
