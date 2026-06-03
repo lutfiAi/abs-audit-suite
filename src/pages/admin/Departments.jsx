@@ -32,8 +32,11 @@ export default function Departments() {
   const [activeDept, setActiveDept] = useState(null)
   const [showAddDept, setShowAddDept] = useState(false)
   const [showAddItem, setShowAddItem] = useState(false)
+  const [showEditItem, setShowEditItem] = useState(false)
+  const [selectedItem, setSelectedItem] = useState(null)
   const [deptForm, setDeptForm] = useState({ name_ar: '', name_en: '', icon: '📋' })
   const [itemForm, setItemForm] = useState({ text_ar: '', text_en: '', risk_level: 'M', max_score: 10 })
+  const [editItemForm, setEditItemForm] = useState({ text_ar: '', risk_level: 'M', max_score: 10 })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -99,6 +102,26 @@ export default function Departments() {
     setSaving(false)
   }
 
+  const handleEditItem = async () => {
+    setSaving(true); setError('')
+    const { error: err } = await supabase.from('audit_items').update({
+      text_ar: editItemForm.text_ar,
+      risk_level: editItemForm.risk_level,
+      max_score: Number(editItemForm.max_score),
+    }).eq('id', selectedItem.id)
+    if (err) { setError(err.message); setSaving(false); return }
+    setShowEditItem(false)
+    fetchItems(activeDept.id)
+    setSaving(false)
+  }
+
+  const openEditItem = (item) => {
+    setSelectedItem(item)
+    setEditItemForm({ text_ar: item.text_ar, risk_level: item.risk_level, max_score: item.max_score })
+    setShowEditItem(true)
+    setError('')
+  }
+
   const deleteDept = async (id) => {
     if (!confirm('هل تريد حذف هذا القسم وجميع بنوده؟')) return
     await supabase.from('departments').update({ is_active: false }).eq('id', id)
@@ -150,7 +173,7 @@ export default function Departments() {
                   ${activeDept?.id === d.id ? 'bg-amber-500 text-white' : 'hover:bg-slate-50 text-slate-700'}`}>
                 <button
                   onClick={e => { e.stopPropagation(); deleteDept(d.id) }}
-                  className={`opacity-0 group-hover:opacity-100 text-xs px-1.5 py-0.5 rounded-lg transition-all shrink-0
+                  className={`opacity-0 group-hover:opacity-100 text-xs px-1 py-0.5 rounded-lg transition-all shrink-0
                     ${activeDept?.id === d.id ? 'hover:bg-white/20 text-white' : 'hover:bg-red-100 text-red-500'}`}>
                   🗑️
                 </button>
@@ -190,32 +213,36 @@ export default function Departments() {
                 <div className="bg-white rounded-2xl p-8 text-center border border-slate-100">
                   <div className="text-4xl mb-2">📝</div>
                   <div className="text-slate-400 text-sm">لا توجد بنود في هذا القسم</div>
-                  <button onClick={() => setShowAddItem(true)}
-                    className="mt-3 bg-amber-500 hover:bg-amber-600 text-white text-xs px-4 py-2 rounded-xl font-bold cursor-pointer">
-                    إضافة أول بند
-                  </button>
                 </div>
               ) : (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                   {items.map((item, i) => {
                     const risk = RISK_LABELS[item.risk_level]
                     return (
-                      <div dir="ltr" key={item.id} className={`flex items-start gap-3 px-5 py-4 hover:bg-slate-50 transition-colors ${i > 0 ? 'border-t border-slate-50' : ''}`}>
-                        <button onClick={() => deleteItem(item.id)}
-                          className="text-slate-300 hover:text-red-500 cursor-pointer transition-colors text-lg shrink-0 mt-0.5">
-                          🗑️
-                        </button>
+                      <div dir="ltr" key={item.id} className={`flex items-center gap-2 px-4 py-3 hover:bg-slate-50 transition-colors ${i > 0 ? 'border-t border-slate-50' : ''}`}>
+                        {/* أزرار صغيرة */}
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => openEditItem(item)}
+                            className="w-6 h-6 rounded-md bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors text-xs">
+                            ✏️
+                          </button>
+                          <button onClick={() => deleteItem(item.id)}
+                            className="w-6 h-6 rounded-md bg-red-100 hover:bg-red-200 text-red-500 flex items-center justify-center cursor-pointer transition-colors text-xs">
+                            🗑️
+                          </button>
+                        </div>
+                        {/* المحتوى */}
                         <div className="flex-1 min-w-0 text-right">
                           <p className="text-sm text-slate-700 leading-relaxed">{item.text_ar}</p>
-                          {item.text_en && <p className="text-xs text-slate-400 mt-0.5" dir="ltr">{item.text_en}</p>}
-                          <div className="flex items-center gap-2 mt-1.5 justify-end">
-                            <span className="text-xs text-slate-400">الدرجة: {item.max_score}</span>
+                          <div className="flex items-center gap-2 mt-1 justify-end">
+                            <span className="text-xs text-slate-400">{item.max_score} درجة</span>
                             <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${risk.color}`}>
-                              {risk.label} الخطورة
+                              {risk.label}
                             </span>
                           </div>
                         </div>
-                        <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center text-xs font-black text-slate-500 shrink-0 mt-0.5">
+                        {/* الرقم */}
+                        <div className="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center text-xs font-black text-slate-500 shrink-0">
                           {i + 1}
                         </div>
                       </div>
@@ -294,7 +321,7 @@ export default function Departments() {
                   {Object.entries(RISK_LABELS).map(([k, v]) => (
                     <button key={k} onClick={() => setItemForm(p => ({ ...p, risk_level: k }))}
                       className={`flex-1 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-all
-                        ${itemForm.risk_level === k ? v.color + ' scale-105' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
+                        ${itemForm.risk_level === k ? v.color + ' scale-105' : 'bg-white text-slate-500 border-slate-200'}`}>
                       {v.label}
                     </button>
                   ))}
@@ -315,6 +342,50 @@ export default function Departments() {
               <button onClick={handleAddItem} disabled={saving}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50">
                 {saving ? '...جارٍ الحفظ' : '➕ إضافة'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* EDIT ITEM MODAL */}
+      {showEditItem && selectedItem && (
+        <Modal title="✏️ تعديل البند" onClose={() => { setShowEditItem(false); setError('') }}>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-bold text-slate-600 block mb-1">نص البند *</label>
+              <textarea value={editItemForm.text_ar} onChange={e => setEditItemForm(p => ({ ...p, text_ar: e.target.value }))}
+                rows={3}
+                className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-amber-400 resize-none" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-600 block mb-1">مستوى الخطورة</label>
+                <div className="flex gap-2">
+                  {Object.entries(RISK_LABELS).map(([k, v]) => (
+                    <button key={k} onClick={() => setEditItemForm(p => ({ ...p, risk_level: k }))}
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold border cursor-pointer transition-all
+                        ${editItemForm.risk_level === k ? v.color + ' scale-105' : 'bg-white text-slate-500 border-slate-200'}`}>
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-600 block mb-1">الدرجة القصوى</label>
+                <select value={editItemForm.max_score} onChange={e => setEditItemForm(p => ({ ...p, max_score: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-400 bg-white">
+                  {[5, 10, 15, 20].map(n => <option key={n} value={n}>{n} درجة</option>)}
+                </select>
+              </div>
+            </div>
+            {error && <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 text-red-600 text-xs">{error}</div>}
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => { setShowEditItem(false); setError('') }}
+                className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-bold cursor-pointer hover:bg-slate-50">إلغاء</button>
+              <button onClick={handleEditItem} disabled={saving}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-xl text-sm font-bold cursor-pointer disabled:opacity-50">
+                {saving ? '...جارٍ الحفظ' : '💾 حفظ'}
               </button>
             </div>
           </div>
